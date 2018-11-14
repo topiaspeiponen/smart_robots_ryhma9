@@ -512,6 +512,59 @@ void zmain(void)
 #endif
 
 #if 1
+    
+void zmain(void) 
+{
+    motor_start();
+    motor_forward(0,0);
+    
+    IR_Start();
+    
+    uint32_t IR_val; 
+
+    IR_flush();
+  
+    struct sensors_ dig;
+    struct sensors_ ref;
+   
+    reflectance_start();
+    reflectance_set_threshold(7000, 7000, 7000, 7000, 7000, 7000); // set center sensor threshold to 11000 and others to 9000
+    
+    int muuttuja = 0;
+    
+    while (SW1_Read() == 1) {
+        if (SW1_Read() == 0) {
+            break;
+        }
+        vTaskDelay(100); 
+    }
+    for (;;) {
+        beginning:
+        motor_forward(40, 200);
+        
+        reflectance_read(&ref);
+        reflectance_digital(&dig);
+        
+        if (dig.r1 == 1 && dig.r2==1 && dig.r3==1 && dig.l1==1 && dig.l2==1 && dig.l3==1) {
+            if (muuttuja == 0 || muuttuja > 5) {
+                motor_forward(0,0);
+                
+                
+                for (;;) {
+                if(IR_get(&IR_val, portMAX_DELAY)) {
+                   goto beginning;
+                }
+                vTaskDelay(100); 
+                }
+               
+            }
+            muuttuja +=1;
+        }
+    }
+    }
+
+#endif
+#if 0
 
 void zmain(void)
 {
@@ -536,29 +589,59 @@ void zmain(void)
     for (;;) {
         int r = rand()%3;
         r += 1;
-        r *= 500;
+        r *= 250;
         int d = rand()%2;
              
-       motor_forward(120, 400);
+       motor_forward(255, 50);
        
-        LSM303D_Read_Acc(&data);
-        printf("%8d %8d %8d\n",data.accX, data.accY, data.accZ);
+       LSM303D_Read_Acc(&data);
+       printf("%8d %8d %8d\n",data.accX, data.accY, data.accZ);
         
-        if (abs(data.accX) < 120) {
-            motor_backward(100,1000);
-            if (d == 0) {
-                motor_turn(0,200, 100);
+       if (abs(data.accX) > 8000) {
+        motor_backward(100,1000);
+        if (d == 0) {
+            motor_turn(0,255, 50);
             }
-            else if (d == 1) {
-               motor_turn(200,0, 100); 
+        else if (d == 1) {
+            motor_turn(255,0, 50); 
+            
+            } 
+        }
+        motor_forward(255, 50);
+       
+       LSM303D_Read_Acc(&data);
+       printf("%8d %8d %8d\n",data.accX, data.accY, data.accZ);
+        
+       if (abs(data.accX) > 8000) {
+        motor_backward(100,1000);
+        if (d == 0) {
+            motor_turn(0,255, 50);
+            }
+        else if (d == 1) {
+            motor_turn(255,0, 50); 
+            
+            } 
+        }
+        motor_forward(255, 50);
+       
+       LSM303D_Read_Acc(&data);
+       printf("%8d %8d %8d\n",data.accX, data.accY, data.accZ);
+        
+       if (abs(data.accX) > 8000) {
+        motor_backward(100,1000);
+        if (d == 0) {
+            motor_turn(0,255, 50);
+            }
+        else if (d == 1) {
+            motor_turn(255,0, 50); 
             
             } 
         }
         if (d == 0) {
-        motor_turn(200, 0, r);
+        motor_turn(255, 0, r);
         }
         else if (d == 1) {
-        motor_turn(0, 200, r);
+        motor_turn(0, 255, r);
         }
     }
 }
