@@ -511,9 +511,10 @@ void zmain(void)
 }
 #endif
 
-#if 1
+#if 0
     
 void zmain(void) 
+//Week4 Assigment 1
 {
     motor_start();
     motor_forward(0,0);
@@ -526,9 +527,10 @@ void zmain(void)
   
     struct sensors_ dig;
     struct sensors_ ref;
+    
    
     reflectance_start();
-    reflectance_set_threshold(7000, 7000, 7000, 7000, 7000, 7000); // set center sensor threshold to 11000 and others to 9000
+    reflectance_set_threshold(9000, 9000, 9000, 9000, 9000, 9000); // set center sensor threshold to 11000 and others to 9000
     
     int muuttuja = 0;
     
@@ -539,34 +541,419 @@ void zmain(void)
         vTaskDelay(100); 
     }
     for (;;) {
-        beginning:
-        motor_forward(40, 200);
+        
+        motor_forward(40, 150);
         
         reflectance_read(&ref);
         reflectance_digital(&dig);
         
-        if (dig.r1 == 1 && dig.r2==1 && dig.r3==1 && dig.l1==1 && dig.l2==1 && dig.l3==1) {
-            if (muuttuja == 0 || muuttuja > 5) {
+        if (dig.r1 == 1 && dig.r2==1 && dig.l1==1 && dig.l2==1 ) {
+            muuttuja +=1;
+            
+            if (muuttuja == 1 || muuttuja > 6) {
                 motor_forward(0,0);
                 
                 
                 for (;;) {
                 if(IR_get(&IR_val, portMAX_DELAY)) {
-                   goto beginning;
+                    IR_flush();
+                   break;
                 }
-                vTaskDelay(100); 
+                
+                vTaskDelay(50); 
+                
                 }
                
             }
-            muuttuja +=1;
+            
+            
         }
     }
     }
+    
 
 #endif
 #if 0
+    //Week4 Assigment2
+    void zmain(void) 
+{
+    motor_start();
+    motor_forward(0,0);
+    int muuttuja=0;
+    int toinen_muuttuja=0;
+    
+    
+    IR_Start();
+    
+    uint32_t IR_val; 
+
+    IR_flush();
+  
+    struct sensors_ dig;
+    struct sensors_ ref;
+
+    reflectance_start();
+    reflectance_set_threshold(9000, 9000, 11000, 11000, 9000, 9000); // set center sensor threshold to 11000 and others to 9000
+    
+    
+    
+    while (SW1_Read() == 1) {
+        if (SW1_Read() == 0) {
+            break;
+        }
+        vTaskDelay(100); 
+    }
+    
+    for (;;) {
+        motor_forward(40, 150);
+        
+        reflectance_read(&ref);
+        reflectance_digital(&dig);
+        
+        if (dig.r1 == 1 && dig.r2==1 && dig.r3==1 && dig.l1==1 && dig.l2==1 && dig.l3==1) {
+            motor_forward(0,0);
+            
+            for (;;) {
+                if(IR_get(&IR_val, portMAX_DELAY)) {
+                    IR_flush();
+                    muuttuja+=1;
+                    motor_forward(40, 200);
+                    break;
+                }
+                vTaskDelay(50); 
+            }
+            }
+        if (muuttuja > 0) {
+            for (;;) {
+                
+                reflectance_read(&ref);
+                reflectance_digital(&dig);
+                
+                if (dig.r1 == 1 && dig.r2==1 && dig.l1==1 && dig.l2==1)
+                    {
+                    //risteys
+                    toinen_muuttuja +=1;
+                    if (toinen_muuttuja==1) {
+                        motor_forward(40, 200);                    }
+                    else if (toinen_muuttuja > 1 && toinen_muuttuja < 3) {
+                        motor_forward(0,0);
+                        motor_turn(0,150,500);
+                    }
+                    else if (toinen_muuttuja >= 3 && toinen_muuttuja <= 4) {
+                        motor_forward(0,0);
+                        motor_turn(150,0,600);
+                    }
+                    else if (toinen_muuttuja > 4) {
+                        motor_forward(0,0);
+                        vTaskDelay(50000);
+                    }
+                    }
+                if (dig.r1 == 1   && dig.l1==1)
+                    {
+                    //mene suoraan
+                    motor_forward(40,1);
+                    }
+
+                else if (dig.l1==1 && dig.l2==1)
+                    {
+                    //käänny oikealle
+                    
+                    motor_forward(0,0);
+                    motor_turn(60,0,1);
+                    }
+        
+                else if (dig.r1 == 1 && dig.r2==1)
+                    {
+                    //käänny vasemmalle
+                    motor_forward(0,0);
+                    motor_turn(60,0,1);
+                    }
+
+                else if (dig.l2==1 && dig.l3==1)
+                    {
+                    //käänny vahvasti oikealle
+                    motor_forward(0,0);
+                    motor_turn(0,80,1);
+                    }
+
+                else if (dig.r3==1)
+                    {
+                    //käänny vahvasti vasemmalle
+                    motor_forward(0,0);
+                    motor_turn(80,0,1);
+                    }
+            }
+        }
+    }   
+}
+
+#endif
+
+#if 0
+    //Week4Assigment3
+    void zmain (void){
+    
+    motor_start();
+    motor_forward(0,0);
+    int muuttuja=0;
+    int toinen_muuttuja=0;
+    
+    
+    IR_Start();
+    
+    uint32_t IR_val; 
+
+    IR_flush();
+  
+    struct sensors_ dig;
+    struct sensors_ ref;
+
+    reflectance_start();
+    reflectance_set_threshold(9000, 9000, 9000, 9000, 9000, 9000); // set center sensor threshold to 11000 and others to 9000
+    
+    
+    
+    while (SW1_Read() == 1) {
+        if (SW1_Read() == 0) {
+            break;
+        }
+        vTaskDelay(100); 
+    }
+    
+    for (;;) {
+        motor_forward(40, 150);
+        
+        reflectance_read(&ref);
+        reflectance_digital(&dig);
+        
+        if (dig.r1 == 1 && dig.r2==1 && dig.r3==1 && dig.l1==1 && dig.l2==1 && dig.l3==1) {
+            motor_forward(0,0);
+            for (;;) {
+                if(IR_get(&IR_val, portMAX_DELAY)) {
+                    IR_flush();
+                    muuttuja+=1;
+                    motor_forward(40, 200);
+                    break;
+                }
+                vTaskDelay(50); 
+            }
+            }
+        if (muuttuja > 0) {
+            for (;;) {
+                
+                reflectance_read(&ref);
+                reflectance_digital(&dig);
+                
+                if (dig.r1 == 1 && dig.r2==1 && dig.l1==1 && dig.l2==1)
+                    {
+                    //risteys
+                    toinen_muuttuja +=1;
+                    if (toinen_muuttuja > 1) {
+                        motor_forward(0,0);
+                        vTaskDelay(50000);
+                    }
+                    }
+                if (dig.r1 == 1   && dig.l1==1)
+                    {
+                    //mene suoraan
+                    motor_forward(40,1);
+                    }
+                else if (dig.l1==1)
+                    {
+                    //käänny oikealle
+                    
+                    motor_forward(0,0);
+                    motor_turn(60,0,1);
+                    }
+        
+                else if (dig.r1 == 1)
+                    {
+                    //käänny vasemmalle
+                    motor_forward(0,0);
+                    motor_turn(60,0,1);
+                    }
+
+                else if (dig.l2==1 && dig.l3==1)
+                    {
+                    //käänny vahvasti oikealle
+                    motor_forward(0,0);
+                    motor_turn(0,80,1);
+                    }
+
+                else if (dig.r3==1)
+                    {
+                    //käänny vahvasti vasemmalle
+                    motor_forward(0,0);
+                    motor_turn(80,0,1);
+                    }
+            }
+        }
+    }   
+}
+
+#endif
+
+#if 0
+//Week 5 Assigent 1
+void zmain(void)
+{
+    vTaskDelay(15000);
+    RTC_Start(); // start real time clock
+    int entered_hour=0;
+    int entered_min=0;
+    
+    RTC_TIME_DATE now;
+    
+    
+    print_mqtt("Zumo042/output", "asdf");
+    
+    // set current time
+    printf("Enter the current hour:");
+    scanf("%d", &entered_hour);
+    
+    printf("Enter the current minute:");
+    scanf("%d", &entered_min);
+    
+    now.Hour = entered_hour;
+    now.Min = entered_min;
+    now.Sec = 00;
+    now.DayOfMonth = 25;
+    now.Month = 9;
+    now.Year = 2018;
+    RTC_WriteTime(&now); // write the time to real time clock
+
+    for(;;)
+    {
+        if(SW1_Read() == 0) {
+            // read the current time
+            RTC_DisableInt(); /* Disable Interrupt of RTC Component */
+            now = *RTC_ReadTime(); /* copy the current time to a local variable */
+            RTC_EnableInt(); /* Enable Interrupt of RTC Component */
+
+            // print the current time
+            print_mqtt("Zumo042/output", "%2d:%02d.%02d\n", now.Hour, now.Min, now.Sec);
+            printf("%2d:%02d.%02d\n", now.Hour, now.Min, now.Sec);
+            // wait until button is released
+            while(SW1_Read() == 0) vTaskDelay(50);
+        }
+        vTaskDelay(50);
+    }
+}   
+
+#endif
+#if 0
+//Week 5 Assignment 2
+void zmain(void)
+{
+   Ultra_Start();
+
+    while (SW1_Read() == 1) {
+        if (SW1_Read() == 0) {
+            break;
+        }
+        vTaskDelay(100); }
+
+    for (;;)
+    {
+        int random = rand() % 2;
+        
+        int Ultra_GetDistance();
+        printf("%d \n",Ultra_GetDistance());
+        motor_start();
+        motor_forward(0,0);
+
+
+        motor_forward(100,0);
+
+        if( Ultra_GetDistance()<15)
+        { 
+            motor_forward(0,0);
+            motor_backward(100,750);
+            if (random == 0) {
+                print_mqtt("Zumo042/output", "Turned right.");
+                motor_turn(0,200,250);
+            }
+            else if (random ==1) {
+                print_mqtt("Zumo042/output", "Turned left.");
+                motor_turn(200, 0 ,250);
+            }
+        }
+} 
+    
+}
+#endif
+
+#if 0
+    //Week5Assigment3
+    void zmain (void){
+    
+    motor_start();
+    motor_forward(0,0);
+    int muuttuja=0;
+    TickType_t start;
+    TickType_t end;
+    int time=0;
+    
+    
+    IR_Start();
+    
+    uint32_t IR_val; 
+
+    IR_flush();
+  
+    struct sensors_ dig;
+    struct sensors_ ref;
+
+    reflectance_start();
+    reflectance_set_threshold(9000, 9000, 9000, 9000, 9000, 9000); // set center sensor threshold to 11000 and others to 9000
+    
+    while (SW1_Read() == 1) {
+        if (SW1_Read() == 0) {
+            break;
+        }
+        vTaskDelay(100); 
+    }
+    
+    start = xTaskGetTickCount();
+    
+    for (;;) {
+        motor_forward(40, 150);
+        
+        reflectance_read(&ref);
+        reflectance_digital(&dig);
+        
+        if (dig.r1 == 1 && dig.r2==1  && dig.l1==1 && dig.l2==1) {
+            motor_forward(0,0);
+            end = xTaskGetTickCount();
+            time = end - start;
+            if (muuttuja > 0) {
+                print_mqtt("Zumo042/output", "%d ms", time);
+                
+            }
+            time = time - time;
+            muuttuja += 1;
+            vTaskDelay(3000);
+          
+            for (;;) {
+                if(IR_get(&IR_val, portMAX_DELAY)) {
+                    IR_flush();
+                    muuttuja+=1;
+                    start = xTaskGetTickCount();
+                    motor_forward(40, 200);
+                    break;
+                }
+                vTaskDelay(50); 
+            }
+            }
+    }
+}
+    
+#endif
+
+#if 0
 
 void zmain(void)
+//Week3 Assigment3
 {
     struct accData_ data;
     motor_start();
