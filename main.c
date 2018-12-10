@@ -55,6 +55,532 @@
 */
 
 #if 0
+// Sumo-battle
+void zmain(void)
+{
+struct accData_ data;
+motor_start();
+motor_forward(0,0);
+
+
+IR_Start();
+
+TickType_t start;
+TickType_t end;
+TickType_t time;
+
+
+struct sensors_ dig;
+struct sensors_ ref;
+
+reflectance_start();
+reflectance_set_threshold(11000, 11000, 11000, 11000, 11000, 11000); // set center sensor threshold to 11000 and others to 9000
+Ultra_Start();
+
+while (SW1_Read() == 1) { //Odotetaan napinpainallusta koodin aloitukseen
+if (SW1_Read() == 0) {
+break;
+}
+vTaskDelay(100); 
+}
+
+for (;;) { //Aloitus looppi, mennään aloitusviivalle ja odotetaan IR-signaalia aloitukseen
+motor_forward(40, 150);
+
+reflectance_read(&ref);
+reflectance_digital(&dig);
+
+if (dig.r1 == 1 && dig.r2==1 && dig.r3==1 && dig.l1==1 && dig.l2==1 && dig.l3==1) {
+motor_forward(0,0);
+print_mqtt("Zumo042/ready", "line<br>");
+IR_flush();
+IR_wait();
+start = xTaskGetTickCount();
+print_mqtt("Zumo042/start", "%d <br>", start);
+motor_forward(100, 250);
+
+break;
+}
+}
+for(;;)
+{//sisällä ringissä peruuttaa viivalle tultaessa//
+motor_forward(200, 0);
+
+reflectance_read(&ref);
+reflectance_digital(&dig);
+LSM303D_Read_Acc(&data);
+
+if (abs(data.accX) > 5000) {
+    print_mqtt("Zumo042/hit", "hit");
+}
+else if (abs(data.accY) > 5000) {
+    print_mqtt("Zumo042/hit", "hit");
+}
+
+if (SW1_Read()==0) {
+end=xTaskGetTickCount();
+time=end-start;
+print_mqtt("Zumo042/stop", "%d <br>", end);
+print_mqtt("Zumo042/time", "%d <br>", time);
+}
+
+if ( dig.l3==1 || dig.l2==1) {
+motor_forward(0,0);
+print_mqtt("Zumo042/ready", "line");
+motor_backward(200, 0);
+motor_turn(255,0,600);
+}
+else if (dig.r3==1 || dig.r2==1){
+motor_forward(0,0);
+print_mqtt("Zumo042/ready", "line");
+motor_backward(200, 0);
+motor_turn(0,255,600);
+}
+
+if (Ultra_GetDistance()<150) {
+    motor_forward(255,100);
+
+}
+
+}
+}
+#endif
+
+#if 0
+//Projektin kilparata
+
+void zmain(void)
+{
+        
+    motor_start();
+    motor_forward(0,0);
+    
+    TickType_t start;
+    TickType_t end;
+    TickType_t currenttime;
+    int time=0;
+    int Ratakulkutarkistaja=1; //Määritellään onko robotti radalla vai ei, 1 = on radalla (alkuarvo)
+                               //ja 0 = ei ole radalla
+    
+    
+    IR_Start();
+    
+    struct sensors_ dig;
+    struct sensors_ ref;
+
+    reflectance_start();
+    reflectance_set_threshold(9000, 9000, 11000, 11000, 9000, 9000); // set center sensor threshold to 11000 and others to 9000
+    
+    while (SW1_Read() == 1) { //Odotetaan napinpainallusta koodin aloitukseen
+        if (SW1_Read() == 0) {
+            break;
+        }
+        vTaskDelay(100); 
+    }
+    
+    for (;;) { //Aloitus looppi, mennään aloitusviivalle ja odotetaan IR-signaalia aloitukseen
+        motor_forward(40, 150);
+        
+        reflectance_read(&ref);
+        reflectance_digital(&dig);
+        
+        if (dig.r1 == 1 && dig.r2==1 && dig.r3==1 && dig.l1==1 && dig.l2==1 && dig.l3==1) {
+            motor_forward(0,0);
+            print_mqtt("Zumo042/ready", "line<br>");
+            IR_flush();
+            IR_wait();
+            motor_forward(255, 150);
+            start = xTaskGetTickCount();
+            print_mqtt("Zumo042/start", "%d ms<br>", start);
+            
+            break;
+        }
+    }
+    
+    for (;;) { //Ajo-loop
+                reflectance_read(&ref);
+                reflectance_digital(&dig);
+                
+                if (dig.r1==0 && dig.l1==0) {
+                    currenttime = xTaskGetTickCount();
+                    print_mqtt("Zumo042/miss", "%d<br>", currenttime);
+                    Ratakulkutarkistaja= 0;
+                }
+                if (dig.r1 == 1 && dig.r2==1 && dig.l1==1 && dig.l2==1 && dig.l3==1 && dig.r3==1)
+                    {
+                    //Pysähdys risteykseen
+                    end = xTaskGetTickCount();
+                    time = end - start;
+                    print_mqtt("Zumo042/stop", "%d ms<br>", end);
+                    print_mqtt("Zumo042/time", "%d ms<br>", time);
+                    motor_stop();
+                    vTaskDelay(15000);
+                    }
+                    
+                if (dig.r1 == 1   && dig.l1==1)
+                    {
+                    //mene suoraan
+                    motor_forward(255,0);
+                    if (Ratakulkutarkistaja!= 1) {
+                        currenttime= xTaskGetTickCount();
+                        print_mqtt("Zumo042/line", "%d<br>", currenttime);
+                        Ratakulkutarkistaja = 1;
+                        
+                    }
+                    }
+                else if (dig.l1==1)
+                    {
+                    //käänny oikealle
+                    
+                    motor_forward(0,0);
+                    motor_turn(255,175,0);
+                    }
+        
+                else if (dig.r1 == 1)
+                    {
+                    //käänny vasemmalle
+                    motor_forward(0,0);
+                    motor_turn(175,255,0);
+                    }
+
+                else if (dig.l2==1 && dig.l3==1)
+                    {
+                    //käänny vahvasti oikealle
+                    motor_forward(0,0);
+                    motor_turn(15,255,0);
+                    }
+
+                else if (dig.r3==1)
+                    {
+                    //käänny vahvasti vasemmalle
+                    motor_forward(0,0);
+                    motor_turn(255,15,0);
+                    }
+    }
+    
+}
+#endif
+
+#if 0
+//projekti MAZE ///
+
+void zmain(void) {
+
+IR_Start();
+
+IR_flush();
+
+Ultra_Start();
+
+struct sensors_ dig;
+struct sensors_ ref;
+
+
+reflectance_start();
+reflectance_set_threshold(9000, 9000, 9000, 9000, 9000, 9000); 
+
+motor_start(); 
+TickType_t start;
+TickType_t intersection;
+TickType_t stop;
+int time=0;
+float koordinaatti=0.0;
+motor_forward(0,0); 
+
+while (SW1_Read() == 1) { 
+if (SW1_Read() == 0) {
+break;
+}
+vTaskDelay(100); 
+}
+
+
+for (;;) { //alku risteykseen, uudelleenkäytetty//
+motor_forward(40, 150);
+
+reflectance_read(&ref);
+reflectance_digital(&dig);
+
+if (dig.r1 == 1 && dig.r2==1 && dig.r3==1 && dig.l1==1 && dig.l2==1 && dig.l3==1) {
+motor_forward(0,0);
+print_mqtt("Zumo042/ready", "line<br>");
+IR_flush();
+IR_wait();
+motor_forward(255, 100);
+start = xTaskGetTickCount();
+print_mqtt("Zumo042/start", "%d ms<br>", start); 
+break;
+
+}
+} 
+for (;;) { //Ajo-loop
+    reflectance_read(&ref);
+    reflectance_digital(&dig); 
+    Ultra_GetDistance();
+
+    if (Ultra_GetDistance()<20) {
+    motor_forward(0,0);
+    motor_turn(255,175,1);
+
+    }
+    if (dig.r1 == 1 && dig.r2==1 && dig.l1==1 && dig.l2==1 && dig.l3==1 && dig.r3==1)
+    {
+    //Pysähdys risteykseen
+    intersection = xTaskGetTickCount();
+    time = intersection - start;
+    print_mqtt("Zumo042/time", "%d ms<br>", time);
+    /// print koordinaatit myös //
+    koordinaatti +=1;
+
+    }
+
+    if (dig.r1 == 1 && dig.l1==1)
+    {
+    //mene suoraan
+    motor_forward(255,1);
+    }
+    else if (dig.l1==1)
+    {
+    //käänny oikealle 
+    motor_forward(0,0);
+    motor_turn(255,175,1);
+    }
+
+    else if (dig.r1 == 1)
+    {
+    //käänny vasemmalle
+    motor_forward(0,0);
+    motor_turn(175,255,1);
+    }
+
+    else if (dig.l2==1 && dig.l3==1)
+    {
+    //käänny vahvasti oikealle
+    motor_forward(0,0);
+    motor_turn(25,255,1);
+    }
+
+    else if (dig.r3==1)
+    {
+    //käänny vahvasti vasemmalle
+    motor_forward(0,0);
+    motor_turn(255,25,1);
+    }
+
+    else if (SW1_Read() == 0) {
+    motor_forward(0,0);
+    stop = xTaskGetTickCount();
+    print_mqtt("Zumo042/stop", "%d ms<br>", stop);
+    break;
+    }
+}
+
+} 
+
+
+#endif
+
+#if 1
+//Projektin esterata
+
+void right_turn(void);
+void left_turn(void);
+void full_turn(void);
+void risteykseen_ajo(void);
+void risteyksesta_lahto(void);
+
+void zmain(void) {
+    motor_start();
+    motor_forward(0,0);
+    //int suunta = 0; //Suunta-muuttuja maalin nähden, 0 = eteenpäin, 1 = vasen, 2 = oikea, 3 = taaksepäin
+    
+    //TickType_t start;
+    //TickType_t end;
+    //int time=0;
+    
+    IR_Start();
+    Ultra_Start();
+
+    //struct sensors_ dig;
+    //struct sensors_ ref;
+
+    reflectance_start();
+    //reflectance_set_threshold(9000, 9000, 11000, 11000, 9000, 9000); // set center sensor threshold to 11000 and others to 9000
+    
+    while (SW1_Read() == 1) { //Odotetaan napinpainallusta koodin aloitukseen
+        if (SW1_Read() == 0) {
+            break;
+        }
+        vTaskDelay(100); 
+    }
+    
+    /*for (;;) { //Aloitus looppi, mennään aloitusviivalle ja odotetaan IR-signaalia aloitukseen
+        motor_forward(40, 150);
+        
+        reflectance_digital(&dig);
+        
+        if (dig.r1 == 1 && dig.r2==1 && dig.r3==1 && dig.l1==1 && dig.l2==1 && dig.l3==1) {
+            motor_forward(0,0);
+            print_mqtt("Zumo042/ready", "line");
+            IR_flush();
+            IR_wait();
+            motor_forward(255, 250);
+            start = xTaskGetTickCount();
+            print_mqtt("Zumo042/start", "%d", start);
+                    
+            break;
+        }
+        
+    }*/
+   
+    for (;;) {
+        if (Ultra_GetDistance() < 15) { //Onko suoraan edessä este
+            right_turn();               //Jos on niin kääntyy oikealle
+            if (Ultra_GetDistance() < 15) { //Onko oikealla este
+                full_turn();                //Jos on niin 180-asteen käännös
+                if (Ultra_GetDistance() < 15) { //Onko vasemmalla este
+                    left_turn();                //Käännytään taaksepäin
+                    risteykseen_ajo();          //Ajeetaan taakse risteykseen
+                    
+                }
+                else {
+                    risteykseen_ajo();
+                    right_turn();
+                }
+            }
+            else {
+                risteykseen_ajo();
+                left_turn();
+            }
+        }
+        risteykseen_ajo();
+        
+    }
+}
+
+void right_turn(void) {
+    motor_forward(0,0);
+    
+    struct sensors_ dig;
+    struct sensors_ ref;
+    
+    reflectance_set_threshold(9000, 9000, 11000, 11000, 9000, 9000);
+    reflectance_digital(&dig);
+    
+    while (dig.r3 ==0 && dig.l3 == 0) {
+        motor_backward(70, 0);
+        reflectance_digital(&dig);
+    }
+    motor_backward(0,0);
+    motor_turn(70, 0, 100);
+    while (dig.r1 != 1 && dig.l1 != 1) {
+        motor_turn(70, 0, 0);
+        reflectance_digital(&dig);
+    }
+    motor_turn(0,0,0);
+    return ;
+}
+
+void left_turn(void) {
+    motor_forward(0,0);
+    
+    struct sensors_ dig;
+    struct sensors_ ref;
+    
+    reflectance_set_threshold(12000, 12000, 14000, 14000, 12000, 12000);
+    reflectance_digital(&dig);
+    while (dig.r3 == 0 && dig.l3 == 0) {
+        motor_backward(70, 0);
+        reflectance_digital(&dig);
+    }
+    motor_backward(0,0);
+    motor_turn(0, 70, 100);
+    while (dig.r1 != 1 && dig.l1 != 1) {
+        motor_turn(0, 70, 0);
+        reflectance_digital(&dig);
+    }
+    motor_turn(0,0,0);
+    return ;
+}
+
+void full_turn(void) {
+    motor_forward(0,0);
+    
+    struct sensors_ dig;
+    struct sensors_ ref;
+    
+    reflectance_set_threshold(12000, 12000, 14000, 14000, 12000, 12000);
+    reflectance_digital(&dig);
+    while (dig.r3 == 1 && dig.l3 == 1) {
+        motor_backward(70, 0);
+        reflectance_digital(&dig);
+    }
+    motor_backward(0,0);
+    motor_turn(70, 0, 100);
+    while (dig.r1 != 1 && dig.l1 != 1) {
+        motor_turn(70, 0, 0);
+        reflectance_digital(&dig);
+    }
+    motor_turn(70, 0, 300);
+    while (dig.r1 != 1 && dig.l1 != 1) {
+        motor_turn(70, 0, 0);
+        reflectance_digital(&dig);
+    }
+    
+    motor_turn(0,0,0);
+    return ;
+}
+
+void risteykseen_ajo(void) {
+    struct sensors_ dig;
+    struct sensors_ ref;
+    
+    reflectance_set_threshold(12000, 12000, 14000, 14000, 12000, 12000);
+    
+    
+    for (;;) {
+        reflectance_digital(&dig);
+        
+        if (dig.r1 == 1 && dig.r2==1 && dig.r3==1 && dig.l1==1 && dig.l2==1 && dig.l3==1) //Risteys havaittu
+        {
+            
+            motor_forward(0,0);
+            vTaskDelay(500);
+            risteyksesta_lahto();
+            break;
+         }
+         if (dig.r1 == 1 && dig.l1==1) //Suoraan ajo
+         {
+            //mene suoraan
+            motor_forward(70,50);
+         }
+         else if (dig.r1==1) //Tasapainotus
+         {
+            //käänny oikealle 
+            motor_forward(0,0);
+            motor_turn(70,50,10);
+            motor_turn(0,0,0);
+         }
+         else if (dig.l1 == 1) //Tasapainotus
+         {
+            //käänny vasemmalle
+            motor_forward(0,0);
+            motor_turn(50,70,10);
+            motor_turn(0,0,0);
+         }
+    }
+    return ;
+}
+
+void risteyksesta_lahto(void) {
+    motor_forward(140, 150);
+    return ;
+}
+
+#endif
+
+
+#if 0
 //Week 3 Assignment 2
 void zmain(void)
 {
@@ -897,7 +1423,7 @@ void zmain(void)
     
     IR_Start();
     
-    uint32_t IR_val; 
+    
 
     IR_flush();
   
@@ -932,18 +1458,14 @@ void zmain(void)
             }
             time = time - time;
             muuttuja += 1;
-            vTaskDelay(3000);
+            
           
-            for (;;) {
-                if(IR_get(&IR_val, portMAX_DELAY)) {
-                    IR_flush();
-                    muuttuja+=1;
-                    start = xTaskGetTickCount();
-                    motor_forward(40, 200);
-                    break;
-                }
-                vTaskDelay(50); 
-            }
+            IR_flush();
+            IR_wait();
+            muuttuja+=1;
+            start = xTaskGetTickCount();
+            motor_forward(40, 200);
+                
             }
     }
 }
